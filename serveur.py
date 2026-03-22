@@ -21,14 +21,6 @@ def is_valid_agent_id(agent_id):
     return True
 
 
-def remove_agent(agent_id):
-    if not agent_id:
-        return
-    with agents_lock:
-        if agent_id in agents:
-            del agents[agent_id]
-
-
 def client_thread(conn, addr):
     registered_agent_id = None
 
@@ -111,32 +103,12 @@ def client_thread(conn, addr):
                     agents[agent_id]["ram_mb"] = ram_val
                 send_response(conn, "OK")
 
-            elif command == "BYE":
-                if len(parts) != 2:
-                    send_response(conn, "ERROR")
-                    continue
-
-                agent_id = parts[1]
-                if not is_valid_agent_id(agent_id):
-                    send_response(conn, "ERROR")
-                    continue
-
-                if registered_agent_id is None or agent_id != registered_agent_id:
-                    send_response(conn, "ERROR")
-                    continue
-
-                remove_agent(agent_id)
-                print(f"[BYE] {agent_id} disconnected")
-                send_response(conn, "OK")
-                return
-
             else:
                 send_response(conn, "ERROR")
 
     except Exception as exc:
         print(f"[CLIENT ERROR] {addr}: {exc}")
     finally:
-        remove_agent(registered_agent_id)
         try:
             conn.close()
         except OSError:
