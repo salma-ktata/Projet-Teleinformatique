@@ -1,13 +1,18 @@
 import socket
 import time
 import tracemalloc
+import os
+import uuid
 
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
-AGENT_ID = "agent1"
 AGENT_HOSTNAME = socket.gethostname()
 T = 5
+
+
+def generate_agent_id():
+    return f"agent-{os.getpid()}-{uuid.uuid4().hex[:6]}"
 
 
 def send_line(sock, text):
@@ -22,7 +27,9 @@ def read_line(file_obj):
 
 
 def main():
-    if " " in AGENT_ID or not AGENT_ID:
+    agent_id = generate_agent_id()
+
+    if " " in agent_id or not agent_id:
         raise ValueError("agent_id must be non-empty and contain no spaces")
     if T <= 0:
         raise ValueError("interval must be > 0")
@@ -35,10 +42,10 @@ def main():
 
     print(f"[CLIENT] Connected to {DEFAULT_HOST}:{DEFAULT_PORT}")
 
-    hello_msg = f"HELLO {AGENT_ID} {AGENT_HOSTNAME}"
+    hello_msg = f"HELLO {agent_id} {AGENT_HOSTNAME}"
     send_line(sock, hello_msg)
     hello_resp = read_line(server_in)
-    print(f"[CLIENT] HELLO -> {hello_resp}")
+    print(f"[CLIENT] HELLO {agent_id} -> {hello_resp}")
     if hello_resp != "OK":
         sock.close()
         return
@@ -72,7 +79,7 @@ def main():
             ram_mb = current_bytes / (1024 * 1024)
 
             timestamp = int(time.time())
-            report_msg = f"REPORT {AGENT_ID} {timestamp} {cpu_pct} {ram_mb}"
+            report_msg = f"REPORT {agent_id} {timestamp} {cpu_pct} {ram_mb}"
             send_line(sock, report_msg)
             report_resp = read_line(server_in)
             print(
@@ -86,7 +93,7 @@ def main():
         print(f"[CLIENT ERROR] {exc}")
     finally:
         try:
-            bye_msg = f"BYE {AGENT_ID}"
+            bye_msg = f"BYE {agent_id}"
             send_line(sock, bye_msg)
             bye_resp = read_line(server_in)
             print(f"[CLIENT] BYE -> {bye_resp}")
